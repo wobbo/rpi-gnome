@@ -2,7 +2,7 @@
 
 Transform a fresh Raspberry Pi OS Lite (Debian 13 Trixie) installation into a fully configured GNOME workstation optimized for Raspberry Pi hardware.
 
-This setup provides a clean GNOME desktop similar to Ubuntu while remaining fully based on Debian and Raspberry Pi packages to ensure proper hardware acceleration and efficient performance on Raspberry Pi systems. For more information go to the Raspberry Pi forum [GUIDE: Install GNOME on Raspberry Pi OS ↗ ](https://forums.raspberrypi.com/viewtopic.php?t=373028#p2233233)
+This setup provides a clean GNOME desktop similar to Ubuntu while remaining fully based on Debian and Raspberry Pi packages to ensure proper hardware acceleration and efficient performance on Raspberry Pi systems. For more information go to the Raspberry Pi forum [GUIDE: Full GNOME on Raspberry Pi OS Lite ↗ ](https://forums.raspberrypi.com/viewtopic.php?t=373028#p2233233)
 
 [![GNOME on Raspberry Pi](https://wobbo.org/screenshots/20250225__373028_Intro_GUIDE_mini.webp)](https://forums.raspberrypi.com/viewtopic.php?t=373028#p2233233)
 
