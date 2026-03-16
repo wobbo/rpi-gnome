@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 set -e
 
-# 2026-03-10 19:57 UTC
+# 2026-03-14 12:20 UTC
 # Ernst Lanser <ernst.lanser@wobbo.org>
-# https://forums.raspberrypi.com/viewtopic.php?t=373028#post_content2233233
+# https://forums.raspberrypi.com/viewtopic.php?t=373028#p2233233
+# https://github.com/wobbo/rpi-gnome-install
 
 # WARNING: 
 # Run this script only on a 
 # fresh Raspberry Pi OS Lite installation.
 
 # Download:
-# wget -O install-gnome.sh https://wobbo.org/install/2026-03-10/install-gnome.sh
+# wget -O install-gnome.sh https://wobbo.org/install/2026-03-14/install-gnome.sh
 # chmod +x install-gnome.sh
 # ./install-gnome.sh
 
 # All-in-one copy-paste SSH:
-# rm -f ./install-gnome.sh && rm -rf ./.install_gnome && wget https://wobbo.org/install/2026-03-10/install-gnome.sh && chmod +x install-gnome.sh && ./install-gnome.sh
+# rm -f ./install-gnome.sh && rm -rf ./.install_gnome && wget https://wobbo.org/install/2026-03-14/install-gnome.sh && chmod +x install-gnome.sh && ./install-gnome.sh
 
 
 # ==============================================================================
@@ -33,7 +34,7 @@ printf "\n"
 printf "  \033[1mWelcome to the GUIDE GNOME Installer\033[0m.\n"
 printf "\n"
 printf "  Transform your Raspberry Pi 4/5 into a sleek,\n"
-printf "  Ubuntu-styled workstation. 2026-03-10\n"
+printf "  Ubuntu-styled workstation. 2026-03-14\n"
 printf "\n"
 # Technische basis (Debian + Raspberry Pi debs)
 printf "  Built on \033[1mDebian 13\033[0m using \033[1mRaspberry Pi packages\033[0m for\n"
@@ -306,97 +307,27 @@ awk 'BEGIN{sec="";aw=0;pw=0} function ov(l){return l ~ /^\s*#?\s*dtoverlay=vc4-.
 apt remove -y firefox firefox-esr im-config showtime totem mpv htop && apt autoremove -y && \
 systemctl daemon-reload && systemctl enable --global gnome-auto-yaru.service && systemctl enable --now fix-chromium-notify.service && systemctl set-default graphical.target && \
 sed -i '/^logo=/ s/^/#/' /etc/gdm3/greeter.dconf-defaults && \
-
-
-
-
-
 # VLC als default voor media MIME types (system + current user + new users)
 install -d -m 0755 /etc/xdg /etc/skel/.config "$REAL_HOME/.config" /usr/local/share/applications /usr/local/bin && \
-MIMEAPPS_VLC_CONTENT='[Default Applications]
-video/mp4=vlc.desktop
-video/x-matroska=vlc.desktop
-video/webm=vlc.desktop
-video/quicktime=vlc.desktop
-video/mpeg=vlc.desktop
-video/x-msvideo=vlc.desktop
-audio/mpeg=vlc.desktop
-audio/mp4=vlc.desktop
-audio/flac=vlc.desktop
-audio/ogg=vlc.desktop
-audio/x-wav=vlc.desktop
-audio/opus=vlc.desktop
-' && \
+MIMEAPPS_VLC_CONTENT=$'[Default Applications]\nvideo/mp4=vlc.desktop\nvideo/x-matroska=vlc.desktop\nvideo/webm=vlc.desktop\nvideo/quicktime=vlc.desktop\nvideo/mpeg=vlc.desktop\nvideo/x-msvideo=vlc.desktop\naudio/mpeg=vlc.desktop\naudio/mp4=vlc.desktop\naudio/flac=vlc.desktop\naudio/ogg=vlc.desktop\naudio/x-wav=vlc.desktop\naudio/opus=vlc.desktop\n' && \
 printf "%s" "$MIMEAPPS_VLC_CONTENT" > /etc/xdg/mimeapps.list && \
 printf "%s" "$MIMEAPPS_VLC_CONTENT" > /etc/skel/.config/mimeapps.list && \
 printf "%s" "$MIMEAPPS_VLC_CONTENT" > "$REAL_HOME/.config/mimeapps.list" && \
 chown "$REAL_USER:$REAL_USER" "$REAL_HOME/.config/mimeapps.list" && \
-
-SRC="/usr/share/applications/vlc.desktop" && \
-DST="/usr/local/share/applications/vlc.desktop" && \
-NEW_ICON="applications-multimedia" && \
-tmp="$(mktemp)" && \
+SRC="/usr/share/applications/vlc.desktop" && DST="/usr/local/share/applications/vlc.desktop" && NEW_ICON="applications-multimedia" && tmp="$(mktemp)" && \
 install -m 0644 "$SRC" "$DST" && \
-awk -v newicon="$NEW_ICON" '
-BEGIN { FS=OFS="=" }
-$1=="Name" || $1 ~ /^Name\[/ {
-    name=$2
-    gsub(/(^| )VLC( |$)/, " ", name)
-    gsub(/  +/, " ", name)
-    sub(/^ /,"",name)
-    sub(/ $/,"",name)
-    gsub(/media player/, "Media player", name)
-    print $1, name
-    next
-}
-$1=="Icon" {
-    print "Icon", newicon
-    next
-}
-{ print }
-' "$DST" > "$tmp" && \
-install -m 0644 "$tmp" "$DST" && \
-rm -f "$tmp" && \
-sed -i \
-  -e 's|^Exec=.*|Exec=/usr/local/bin/vlc-x11 --no-one-instance %U|' \
-  -e 's|^TryExec=.*|TryExec=/usr/local/bin/vlc-x11|' \
-  "$DST" && \
-cat > /usr/local/bin/vlc-x11 <<'EOF'
-#!/bin/sh
-
-# Forceer X11
-unset WAYLAND_DISPLAY
-export QT_QPA_PLATFORM=xcb
-
-VLC_CONFIG="$HOME/.config/vlc/vlcrc"
-
-# Lees GNOME dark/light
-scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'")
-
-# Zorg dat config bestaat
-mkdir -p "$HOME/.config/vlc"
-touch "$VLC_CONFIG"
-
-# Verwijder bestaande qt-dark-palette regels
-sed -i '/^qt-dark-palette=/d' "$VLC_CONFIG"
-sed -i '/^#qt-dark-palette=/d' "$VLC_CONFIG"
-
-# Zet juiste waarde
-if [ "$scheme" = "prefer-dark" ]; then
-    echo "qt-dark-palette=1" >> "$VLC_CONFIG"
-else
-    echo "qt-dark-palette=0" >> "$VLC_CONFIG"
-fi
-
-# Start VLC
-exec /usr/bin/vlc --no-one-instance "$@"
-EOF
+awk -v newicon="$NEW_ICON" 'BEGIN{FS=OFS="="}$1=="Name"||$1~/^Name\[/{name=$2;gsub(/(^| )VLC( |$)/," ",name);gsub(/ +/," ",name);sub(/^ /,"",name);sub(/ $/,"",name);gsub(/media player/,"Media player",name);print $1,name;next}$1=="Icon"{print "Icon",newicon;next}{print}' "$DST" > "$tmp" && \
+install -m 0644 "$tmp" "$DST" && rm -f "$tmp" && \
+sed -i -e 's|^Exec=.*|Exec=/usr/local/bin/vlc-x11 --no-one-instance %U|' -e 's|^TryExec=.*|TryExec=/usr/local/bin/vlc-x11|' "$DST" && \
+printf '%s\n' '#!/bin/sh' 'unset WAYLAND_DISPLAY' 'export QT_QPA_PLATFORM=xcb' \
+'VLC_CONFIG="$HOME/.config/vlc/vlcrc"' \
+'scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | tr -d "'\''")' \
+'mkdir -p "$HOME/.config/vlc"; touch "$VLC_CONFIG"' \
+"sed -i '/^qt-dark-palette=/d;/^#qt-dark-palette=/d' \"\$VLC_CONFIG\"" \
+'if [ "$scheme" = "prefer-dark" ]; then echo "qt-dark-palette=1" >> "$VLC_CONFIG"; else echo "qt-dark-palette=0" >> "$VLC_CONFIG"; fi' \
+'exec /usr/bin/vlc --no-one-instance "$@"' > /usr/local/bin/vlc-x11 && \
 chmod 0755 /usr/local/bin/vlc-x11 && \
 update-desktop-database /usr/local/share/applications 2>/dev/null || true && \
-
-
-
-
 
 chown -R "$REAL_USER:$REAL_USER" "$REAL_HOME/.config/autostart"
 ROOT
