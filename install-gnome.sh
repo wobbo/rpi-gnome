@@ -6,7 +6,7 @@
 # The date below shows the script version, and the links point to the forum thread
 # and source project where updates or discussion can be found.
 #
-# 2026-05-12 UTC
+# 2026-08-17 UTC
 # Ernst Lanser <ernst.lanser@wobbo.org>
 # https://forums.raspberrypi.com/viewtopic.php?t=373028
 # https://github.com/wobbo/rpi-gnome-install
@@ -23,7 +23,7 @@
 # Use these commands when you want to download the installer first, make it
 # executable, and then start it manually from the terminal.
 #
-# wget -O install-gnome.sh https://wobbo.org/install/2026-05-12/install-gnome.sh
+# wget -O install-gnome.sh https://wobbo.org/install/2026-08-17/install-gnome.sh
 # chmod +x install-gnome.sh
 # ./install-gnome.sh
 
@@ -33,7 +33,7 @@
 # a fresh copy, makes it executable, and starts it. It is useful when installing
 # through SSH and you want one copy-paste command.
 #
-# rm -f ./install-gnome.sh && rm -rf ./.install_gnome && wget https://wobbo.org/install/2026-05-12/install-gnome.sh && chmod +x install-gnome.sh && ./install-gnome.sh
+# rm -f ./install-gnome.sh && rm -rf ./.install_gnome && wget https://wobbo.org/install/2026-08-17/install-gnome.sh && chmod +x install-gnome.sh && ./install-gnome.sh
 
 # Stop immediately when a command fails.
 #
@@ -427,6 +427,7 @@ load_step2_choices() {
     CODE_EDITOR_STATE=OFF
     REMOTE_GAMING_STATE=OFF
     RASPBERRY_PI_STATE=OFF
+    CHROMIUM_PRIVACY_STATE=OFF
 
     if [ -f "$DESKTOP_FILE" ]; then
         while IFS='=' read -r KEY VALUE; do
@@ -438,7 +439,7 @@ load_step2_choices() {
                         gnome|ubuntu) DESKTOP="$VALUE" ;;
                     esac
                     ;;
-                FLATHUB_STATE|GAMES_STATE|GRAPHICS_STATE|AUDIO_EDITOR_STATE|CODE_EDITOR_STATE|REMOTE_GAMING_STATE|RASPBERRY_PI_STATE)
+                FLATHUB_STATE|GAMES_STATE|GRAPHICS_STATE|AUDIO_EDITOR_STATE|CODE_EDITOR_STATE|REMOTE_GAMING_STATE|RASPBERRY_PI_STATE|CHROMIUM_PRIVACY_STATE)
                     case "$VALUE" in
                         ON|OFF) printf -v "$KEY" '%s' "$VALUE" ;;
                     esac
@@ -466,6 +467,7 @@ AUDIO_EDITOR_STATE=$AUDIO_EDITOR_STATE
 CODE_EDITOR_STATE=$CODE_EDITOR_STATE
 REMOTE_GAMING_STATE=$REMOTE_GAMING_STATE
 RASPBERRY_PI_STATE=$RASPBERRY_PI_STATE
+CHROMIUM_PRIVACY_STATE=$CHROMIUM_PRIVACY_STATE
 DESKTOP_EOF
     chmod 600 "$DESKTOP_FILE"
 }
@@ -571,12 +573,12 @@ show_step2_intro() {
 
  The installer will:
 
-  â€¢ Configure keyboard layout
-  â€¢ Configure timezone and locale
-  â€¢ Select optional software
-  â€¢ Choose desktop style
-  â€¢ Update package lists
-  â€¢ Remove unused packages
+  • Configure keyboard layout
+  • Configure timezone and locale
+  • Select optional software
+  • Choose desktop style
+  • Update package lists
+  • Remove unused packages
 
  Continue with Step 2?
 " 22 70
@@ -601,14 +603,15 @@ Select additional software categories to install.
 
 Use SPACE to toggle selections.
 Use TAB to navigate.
-" 18 61 7 \
-            "Flathub"       "Access thousands of desktop apps"  "$FLATHUB_STATE" \
-            "Games"         "Classic and 3D games from Debian"  "$GAMES_STATE"  \
-            "Graphics"      "GIMP and Inkscape"                 "$GRAPHICS_STATE" \
-            "Audio editor"  "Audacity"                          "$AUDIO_EDITOR_STATE" \
-            "Code editor"   "Visual Studio Code"                "$CODE_EDITOR_STATE" \
-            "Remote gaming" "SteamLink"                         "$REMOTE_GAMING_STATE" \
-            "Raspberry Pi"  "Imager to writes SD, USB, NVMe"    "$RASPBERRY_PI_STATE" \
+" 19 70 8 \
+            "Flathub"          "Access thousands of desktop apps"       "$FLATHUB_STATE" \
+            "Games"            "Classic and 3D games from Debian"       "$GAMES_STATE"  \
+            "Graphics"         "GIMP, Inkscape and extra tools"         "$GRAPHICS_STATE" \
+            "Audio editor"     "Audacity"                               "$AUDIO_EDITOR_STATE" \
+            "Code editor"      "Visual Studio Code"                     "$CODE_EDITOR_STATE" \
+            "Remote gaming"    "SteamLink"                              "$REMOTE_GAMING_STATE" \
+            "Raspberry Pi"     "Imager to writes SD, USB, NVMe"         "$RASPBERRY_PI_STATE" \
+            "Chromium privacy" "Reduce Google integration in Chromium"  "$CHROMIUM_PRIVACY_STATE" \
             3>&1 1>&2 2>&3
     )
 }
@@ -629,6 +632,7 @@ apply_optional_selection() {
     CODE_EDITOR_STATE=OFF
     REMOTE_GAMING_STATE=OFF
     RASPBERRY_PI_STATE=OFF
+    CHROMIUM_PRIVACY_STATE=OFF
 
     if [[ "$PACKAGE_SELECTIONS" == *'"Flathub"'* ]]; then
         FLATHUB_STATE=ON
@@ -656,6 +660,10 @@ apply_optional_selection() {
 
     if [[ "$PACKAGE_SELECTIONS" == *'"Raspberry Pi"'* ]]; then
         RASPBERRY_PI_STATE=ON
+    fi
+
+    if [[ "$PACKAGE_SELECTIONS" == *'"Chromium privacy"'* ]]; then
+        CHROMIUM_PRIVACY_STATE=ON
     fi
 
     save_step2_choices
@@ -918,12 +926,12 @@ if ! whiptail \
 
  The installer will:
 
-  â€¢ Install the GNOME desktop
-  â€¢ Install desktop applications
-  â€¢ Install optional software
-  â€¢ Apply system configuration
-  â€¢ Enable autostart and services
-  â€¢ Remove temporary install files
+  • Install the GNOME desktop
+  • Install desktop applications
+  • Install optional software
+  • Apply system configuration
+  • Enable autostart and services
+  • Remove temporary install files
 
  Continue with Step 3?
 " 24 60
@@ -1029,6 +1037,20 @@ esac
 
 
 
+# Check whether Chromium privacy defaults should be applied.
+#
+# This is a configuration option from Step 2, not a Debian package. When enabled,
+# Step 3 writes system-wide Chromium policies that reduce Google integration
+# while leaving local passwords, cookies, website sessions, Widevine, component
+# updates, and hardware acceleration untouched.
+CHROMIUM_PRIVACY_STATE="$(awk -F= '$1 == "CHROMIUM_PRIVACY_STATE" {print $2; exit}' "$REAL_HOME/.install_gnome/desktop" 2>/dev/null | tr -d '[:space:]')"
+[ -n "$CHROMIUM_PRIVACY_STATE" ] || CHROMIUM_PRIVACY_STATE="OFF"
+
+ENABLE_CHROMIUM_PRIVACY=0
+[ "$CHROMIUM_PRIVACY_STATE" = "ON" ] && ENABLE_CHROMIUM_PRIVACY=1
+
+
+
 # Install GNOME and desktop applications.
 #
 # This is the main package installation step. It installs GNOME Core, Yaru
@@ -1045,10 +1067,20 @@ apt update && apt install --ignore-missing -y \
   libreoffice-{writer,calc,impress,gtk3,gnome} \
   gnome-text-editor simple-scan hplip file-roller \
   network-manager-openvpn-gnome wireguard wireguard-tools \
-  gnome-tweaks gnome-calendar gnome-weather \
+  gnome-tweaks gnome-calendar gnome-weather gnome-characters \
   plymouth plymouth-themes gnome-shell-extension-dashtodock gnome-shell-extension-desktop-icons-ng gnome-shell-extension-user-theme gnome-shell-extension-freon \
-  libopengl0 rpi-keyboard-config rpi-keyboard-fw-update lm-sensors \
-  dbus-x11 $OPTIONAL_PACKAGES || true && \
+  libopengl0 rpi-keyboard-config rpi-keyboard-fw-update lm-sensors preload \
+  dbus-x11 libglib2.0-dev-bin $OPTIONAL_PACKAGES || true && \
+
+
+
+# Enable the preload service.
+#
+# Preload learns which applications are used most often and keeps frequently used
+# program files ready in memory when enough RAM is available. Enabling the service
+# starts it automatically at every boot, while restarting it starts learning now.
+systemctl enable preload.service && \
+systemctl restart preload.service && \
 
 
 
@@ -1060,6 +1092,43 @@ mkdir -p /etc/skel/.config/autostart /etc/dconf/db/local.d && mkdir -p "$REAL_HO
 
 
 
+# Create default Chromium Preferences.
+#
+# This prepares Chromium before the first login, so the first background start
+# does not need to create the profile and then edit Preferences while Chromium is
+# already running.
+(
+    set -e
+
+    install -d -m 0755 \
+        /etc/skel/.config/chromium/Default \
+        "$REAL_HOME/.config/chromium/Default"
+
+    cat > /etc/skel/.config/chromium/Default/Preferences <<'EOF_CHROMIUM_PREFERENCES'
+{
+  "browser": {
+    "theme": {
+      "is_grayscale2": true
+    }
+  },
+  "extensions": {
+    "theme": {
+      "system_theme": 0
+    }
+  }
+}
+EOF_CHROMIUM_PREFERENCES
+
+    install -m 0644 \
+        /etc/skel/.config/chromium/Default/Preferences \
+        "$REAL_HOME/.config/chromium/Default/Preferences"
+
+    chown -R "$REAL_USER:$REAL_USER" "$REAL_HOME/.config/chromium"
+) && \
+
+
+
+
 # Create the dconf profile.
 #
 # GNOME reads user settings from the normal user database and system defaults
@@ -1068,30 +1137,415 @@ echo -e 'user-db:user\nsystem-db:local' | tee /etc/dconf/profile/user >/dev/null
 
 
 
+
+# Patch the GNOME Shell login background color.
+# GNOME stores the login background inside the compiled GNOME Shell theme resource.
+# The helper below changes only #lockDialogGroup to the Yaru background color.
+# It is also installed as an apt hook target so the patch can be restored after
+# future GNOME Shell package updates.
+cat > /usr/local/sbin/wobbo-yaru-gdm-background <<'EOF_WOBBO_YARU_GDM_BACKGROUND'
+#!/usr/bin/env bash
+set -euo pipefail
+
+RESOURCE="/usr/share/gnome-shell/gnome-shell-theme.gresource"
+COLOR="#222222"
+
+MARK_START="WOBBO_YARU_GDM_BACKGROUND_START"
+MARK_END="WOBBO_YARU_GDM_BACKGROUND_END"
+
+CSS_FILES=(
+    "/org/gnome/shell/theme/gnome-shell-dark.css"
+    "/org/gnome/shell/theme/gnome-shell-light.css"
+    "/org/gnome/shell/theme/gnome-shell-high-contrast.css"
+)
+
+# Do not break apt or boot if GNOME Shell is not installed yet.
+[ -f "$RESOURCE" ] || exit 0
+
+# Needed to rebuild the compiled GNOME Shell resource.
+command -v gresource >/dev/null 2>&1 || exit 0
+command -v glib-compile-resources >/dev/null 2>&1 || exit 0
+
+# Avoid two patch runs at the same time.
+if command -v flock >/dev/null 2>&1; then
+    exec 9>/run/wobbo-yaru-gdm-background.lock
+    flock -n 9 || exit 0
+fi
+
+# Fast check: if all existing target CSS files already contain the final patch,
+# there is nothing to do.
+existing_count=0
+patched_count=0
+
+for css in "${CSS_FILES[@]}"; do
+    if gresource list "$RESOURCE" 2>/dev/null | grep -Fxq "$css"; then
+        existing_count=$((existing_count + 1))
+
+        if gresource extract "$RESOURCE" "$css" 2>/dev/null |
+            grep -q "$MARK_START" &&
+           gresource extract "$RESOURCE" "$css" 2>/dev/null |
+            grep -q "background-color: $COLOR"; then
+            patched_count=$((patched_count + 1))
+        fi
+    fi
+done
+
+if [ "$existing_count" -gt 0 ] && [ "$existing_count" -eq "$patched_count" ]; then
+    exit 0
+fi
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+THEME_DIR="$tmp/theme"
+mkdir -p "$THEME_DIR"
+
+# Extract the complete GNOME Shell theme resource.
+while IFS= read -r item; do
+    rel="${item#/org/gnome/shell/theme/}"
+    mkdir -p "$THEME_DIR/$(dirname "$rel")"
+    gresource extract "$RESOURCE" "$item" > "$THEME_DIR/$rel"
+done < <(gresource list "$RESOURCE" | grep '^/org/gnome/shell/theme/')
+
+# Remove old Wobbo test/final blocks so this remains idempotent.
+while IFS= read -r css_file; do
+    for mark in \
+        WOBBO_SINGLE_RED_TEST \
+        WOBBO_SINGLE_COLOR_TEST \
+        WOBBO_YARU_GDM_BACKGROUND \
+        WOBBO_RED_TEST \
+        WOBBO_GDM_BG
+    do
+        perl -0pi -e "s/\n?\/\* ${mark}_START \*\/.*?\/\* ${mark}_END \*\/\n?/\n/sg" "$css_file"
+    done
+done < <(find "$THEME_DIR" -type f -name '*.css')
+
+# Add only the proven Yaru login background color.
+for css_file in \
+    "$THEME_DIR/gnome-shell-dark.css" \
+    "$THEME_DIR/gnome-shell-light.css" \
+    "$THEME_DIR/gnome-shell-high-contrast.css"
+do
+    [ -f "$css_file" ] || continue
+
+    cat >> "$css_file" <<EOF_CSS
+
+/* $MARK_START */
+#lockDialogGroup {
+  background-color: $COLOR;
+}
+/* $MARK_END */
+EOF_CSS
+done
+
+# Rebuild the GNOME Shell theme resource.
+cat > "$THEME_DIR/gnome-shell-theme.gresource.xml" <<EOF_XML
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/gnome/shell/theme">
+$(cd "$THEME_DIR" && find . -type f ! -name 'gnome-shell-theme.gresource.xml' | sed 's|^\./||' | sort | sed 's|.*|    <file>&</file>|')
+  </gresource>
+</gresources>
+EOF_XML
+
+glib-compile-resources \
+    "$THEME_DIR/gnome-shell-theme.gresource.xml" \
+    --sourcedir="$THEME_DIR" \
+    --target="$tmp/gnome-shell-theme.gresource"
+
+# Keep one backup before replacing the package-owned resource.
+cp -a "$RESOURCE" "$RESOURCE.backup-wobbo-yaru-gdm-background-$(date +%Y%m%d-%H%M%S)"
+cp -a "$tmp/gnome-shell-theme.gresource" "$RESOURCE"
+
+exit 0
+EOF_WOBBO_YARU_GDM_BACKGROUND
+
+chmod 755 /usr/local/sbin/wobbo-yaru-gdm-background && \
+
+# Reapply the GNOME Shell login background patch after future package changes.
+# This does not run at boot or login. It only runs after dpkg/apt package actions.
+cat > /etc/apt/apt.conf.d/99wobbo-yaru-gdm-background <<'EOF_WOBBO_YARU_GDM_BACKGROUND_APT'
+DPkg::Post-Invoke {
+    "if [ -x /usr/local/sbin/wobbo-yaru-gdm-background ]; then /usr/local/sbin/wobbo-yaru-gdm-background >/dev/null 2>&1 || true; fi";
+};
+EOF_WOBBO_YARU_GDM_BACKGROUND_APT
+
+chmod 644 /etc/apt/apt.conf.d/99wobbo-yaru-gdm-background && \
+
+# Apply the patch once during installation.
+# Future GNOME Shell package updates are handled by the apt hook above.
+/usr/local/sbin/wobbo-yaru-gdm-background || true && \
+
+
+
+
 # Create a first-login settings script.
 #
 # Some GNOME and application settings are easiest to apply after the user logs in.
 # This generated script runs once from autostart, writes user preferences, starts
-# Chromium once to create its profile, writes VLC defaults, and then removes itself.
-sh -c 'mkdir -p /etc/skel/.config/autostart && printf %b "#!/bin/bash\n\n# Nautilus & File Chooser\ngsettings set org.gtk.Settings.FileChooser sort-directories-first true\ngsettings set org.gtk.gtk4.Settings.FileChooser sort-directories-first true\ngsettings set org.gnome.nautilus.preferences sort-directories-first true\ngsettings set org.gnome.nautilus.preferences default-folder-viewer '\''list-view'\''\ngsettings set org.gnome.nautilus.list-view use-tree-view true\n\n# Desktop Icons (DING)\ngsettings set org.gnome.shell.extensions.ding icon-size '\''small'\''\ngsettings set org.gnome.shell.extensions.ding show-home true\ngsettings set org.gnome.shell.extensions.ding show-trash true\ngsettings set org.gnome.shell.extensions.ding show-volumes false\ngsettings set org.gnome.shell.extensions.ding show-network-volumes false\n\n# General GNOME\ngsettings set org.gnome.calculator refresh-interval 0\ngsettings set org.gnome.mutter dynamic-workspaces false\ngsettings set org.gnome.desktop.wm.preferences num-workspaces 2\ngsettings set org.gnome.desktop.background picture-uri \"file:///usr/share/backgrounds/gnome/blobs-l.svg\"\ngsettings set org.gnome.desktop.background picture-uri-dark \"file:///usr/share/backgrounds/gnome/blobs-d.svg\"\ngsettings set org.gnome.desktop.background primary-color \"#241f31\"\ngsettings set org.gnome.desktop.interface accent-color \"orange\"\ngsettings set org.gnome.desktop.interface gtk-theme \"Yaru\"\ngsettings set org.gnome.desktop.interface icon-theme \"Yaru\"\ngsettings set org.gnome.desktop.interface cursor-theme \"Yaru\"\ngsettings set org.gnome.shell.extensions.user-theme name \"Yaru\"\n\n# Enabled Extensions\ngsettings set org.gnome.shell enabled-extensions \"['\''dash-to-dock@micxgx.gmail.com'\'','\''ding@rastersoft.com'\'','\''user-theme@gnome-shell-extensions.gcampax.github.com'\'','\''gnome-fuzzy-app-search@gnome-shell-extensions.Czarlie.gitlab.com'\'','\''add-to-desktop@tommimon.github.com'\'']\"\n\n# Favorites\ngsettings set org.gnome.shell favorite-apps \"['\''chromium.desktop'\'','\''org.gnome.Nautilus.desktop'\'','\''libreoffice-writer.desktop'\'','\''org.gnome.Software.desktop'\'','\''yelp.desktop'\'','\''org.gnome.Settings.desktop'\'']\"\n\n# Start Chromium tmp\nchromium --no-startup-window --user-data-dir=\"\$HOME/.config/chromium\" --enable-zero-copy --enable-gpu-rasterization --no-first-run --no-default-browser-check >/dev/null 2>&1 &\n\n# Wait for Preferences\nPREF=\"\$HOME/.config/chromium/Default/Preferences\"\nfor i in {1..400}; do\n  [ -f \"\$PREF\" ] && break\n  sleep 0.05\ndone\n\n# Change Preferences\nperl -MJSON::PP -0777 -i -e '\''\n  my \$f = shift;\n\n  open my \$in, \"<\", \$f or exit 0;\n  local \$/; my \$txt = <\$in>;\n  close \$in;\n\n  my \$j = eval { decode_json(\$txt) } || {};\n\n  # extensions.theme.system_theme = 0\n  \$j->{extensions} = {} unless ref(\$j->{extensions}) eq \"HASH\";\n  \$j->{extensions}{theme} = {} unless ref(\$j->{extensions}{theme}) eq \"HASH\";\n  \$j->{extensions}{theme}{system_theme} = 0;\n\n  # browser.theme = {\"is_grayscale2\": true}\n  \$j->{browser} = {} unless ref(\$j->{browser}) eq \"HASH\";\n  \$j->{browser}{theme} = { is_grayscale2 => JSON::PP::true };\n\n  open my \$out, \">\", \$f or die \"write: \$!\";\n  print \$out encode_json(\$j);\n  close \$out;\n'\'' \"\$PREF\"\n\n# Start Chromium background\nnohup chromium --no-startup-window --user-data-dir=\"\$HOME/.config/chromium\" --enable-zero-copy --enable-gpu-rasterization --no-first-run --no-default-browser-check --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 >/dev/null 2>&1 </dev/null &\n\n# Make autostart\nmkdir -p \"\$HOME/.config/autostart\"\ncat > \"\$HOME/.config/autostart/chromium-background.desktop\" <<'\''EOF'\''\n[Desktop Entry]\nType=Application\nName=Chromium\nExec=/bin/bash -lc '\''nohup chromium --no-startup-window --user-data-dir=\"\$HOME/.config/chromium\" --enable-zero-copy --enable-gpu-rasterization --no-first-run --no-default-browser-check --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 >/dev/null 2>&1 </dev/null &'\''\nIcon=chromium\nX-GNOME-Autostart-enabled=true\nNoDisplay=true\nEOF\n\n# VLC defaults\nmkdir -p \"\$HOME/.config/vlc\"\nprintf %b \"[qt]\nqt-system-tray=0\nqt-video-autoresize=0\nvideo-title-show=0\nvideo-title-timeout=0\nqt-bgcone=0\n\" > \"\$HOME/.config/vlc/vlcrc\"\nprintf %b \"[MainWindow]\nQtStyle=Fusion\nToolbarPos=false\nadv-controls=0\npl-dock-status=true\nplaylist-visible=false\nstatus-bar-visible=false\ntoolbar-profile=Trixie\nAdvToolbar=\\\"12;11;13;14;\\\"\nFSCtoolbar=\\\"20-4;65;3-4;0-2;4-4;65-4;8;\\\"\nInputToolbar=\\\"43;33-4;44;\\\"\nMainToolbar1=\\\"64;39;64;38;65;\\\"\nMainToolbar2=\\\"20;65-4;22-4;0-2;23-4;65;7;\\\"\n\n[OpenDialog]\nadvanced=false\n\" > \"\$HOME/.config/vlc/vlc-qt-interface.conf\"\n\n# Quit and remove setting.desktop and setting.sh\nrm -f \"\$HOME/.config/autostart/settings.desktop\"\nrm -- \"\$0\"\n" > /etc/skel/.config/autostart/settings.sh && chmod 755 /etc/skel/.config/autostart/settings.sh' && install -D -m 755 /etc/skel/.config/autostart/settings.sh "$REAL_HOME/.config/autostart/settings.sh" && \
+# Chromium in the background, writes VLC defaults, and then removes itself.
+sh -c 'mkdir -p /etc/skel/.config/autostart && printf %b "#!/bin/bash\n\n# Nautilus & File Chooser\ngsettings set org.gtk.Settings.FileChooser sort-directories-first true\ngsettings set org.gtk.gtk4.Settings.FileChooser sort-directories-first true\ngsettings set org.gnome.nautilus.preferences sort-directories-first true\ngsettings set org.gnome.nautilus.preferences default-folder-viewer '\''list-view'\''\ngsettings set org.gnome.nautilus.list-view use-tree-view true\n\n# Desktop Icons (DING)\ngsettings set org.gnome.shell.extensions.ding icon-size '\''small'\''\ngsettings set org.gnome.shell.extensions.ding show-home true\ngsettings set org.gnome.shell.extensions.ding show-trash true\ngsettings set org.gnome.shell.extensions.ding show-volumes false\ngsettings set org.gnome.shell.extensions.ding show-network-volumes false\n\n# General GNOME\ngsettings set org.gnome.calculator refresh-interval 0\ngsettings set org.gnome.mutter dynamic-workspaces false\ngsettings set org.gnome.desktop.wm.preferences num-workspaces 2\ngsettings set org.gnome.desktop.background picture-uri \"file:///usr/share/backgrounds/gnome/blobs-l.svg\"\ngsettings set org.gnome.desktop.background picture-uri-dark \"file:///usr/share/backgrounds/gnome/blobs-d.svg\"\ngsettings set org.gnome.desktop.background primary-color \"#241f31\"\ngsettings set org.gnome.desktop.interface accent-color \"orange\"\ngsettings set org.gnome.desktop.interface gtk-theme \"Yaru\"\ngsettings set org.gnome.desktop.interface icon-theme \"Yaru\"\ngsettings set org.gnome.desktop.interface cursor-theme \"Yaru\"\ngsettings set org.gnome.shell.extensions.user-theme name \"Yaru\"\n\n# Enabled Extensions\ngsettings set org.gnome.shell enabled-extensions \"['\''dash-to-dock@micxgx.gmail.com'\'','\''ding@rastersoft.com'\'','\''user-theme@gnome-shell-extensions.gcampax.github.com'\'','\''gnome-fuzzy-app-search@gnome-shell-extensions.Czarlie.gitlab.com'\'','\''add-to-desktop@tommimon.github.com'\'']\"\n\n# Favorites\ngsettings set org.gnome.shell favorite-apps \"['\''chromium.desktop'\'','\''org.gnome.Nautilus.desktop'\'','\''libreoffice-writer.desktop'\'','\''org.gnome.Software.desktop'\'','\''yelp.desktop'\'','\''org.gnome.Settings.desktop'\'']\"\n\n# Start Chromium background\nnohup chromium --no-startup-window --user-data-dir=\"\$HOME/.config/chromium\" --enable-zero-copy --enable-gpu-rasterization --no-first-run --no-default-browser-check --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 >/dev/null 2>&1 </dev/null &\n\n# Make Chromium background autostart\nmkdir -p \"\$HOME/.config/autostart\"\ncat > \"\$HOME/.config/autostart/chromium-background.desktop\" <<'\''EOF'\''\n[Desktop Entry]\nType=Application\nName=Chromium\nExec=/bin/bash -lc '\''nohup chromium --no-startup-window --user-data-dir=\"\$HOME/.config/chromium\" --enable-zero-copy --enable-gpu-rasterization --no-first-run --no-default-browser-check --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 >/dev/null 2>&1 </dev/null &'\''\nIcon=chromium\nX-GNOME-Autostart-enabled=true\nNoDisplay=true\nEOF\n\n# VLC defaults\nmkdir -p \"\$HOME/.config/vlc\"\nprintf %b \"[qt]\nqt-system-tray=0\nqt-video-autoresize=0\nvideo-title-show=0\nvideo-title-timeout=0\nqt-bgcone=0\n\" > \"\$HOME/.config/vlc/vlcrc\"\nprintf %b \"[MainWindow]\nQtStyle=Fusion\nToolbarPos=false\nadv-controls=0\npl-dock-status=true\nplaylist-visible=false\nstatus-bar-visible=false\ntoolbar-profile=Trixie\nAdvToolbar=\\\"12;11;13;14;\\\"\nFSCtoolbar=\\\"20-4;65;3-4;0-2;4-4;65-4;8;\\\"\nInputToolbar=\\\"43;33-4;44;\\\"\nMainToolbar1=\\\"64;39;64;38;65;\\\"\nMainToolbar2=\\\"20;65-4;22-4;0-2;23-4;65;7;\\\"\n\n[OpenDialog]\nadvanced=false\n\" > \"\$HOME/.config/vlc/vlc-qt-interface.conf\"\n\n# Quit and remove setting.desktop and setting.sh\nrm -f \"\$HOME/.config/autostart/settings.desktop\"\nrm -- \"\$0\"\n" > /etc/skel/.config/autostart/settings.sh && chmod 755 /etc/skel/.config/autostart/settings.sh' && install -D -m 755 /etc/skel/.config/autostart/settings.sh "$REAL_HOME/.config/autostart/settings.sh" && \
 
+
+
+
+# Install optional Chromium privacy policies.
+#
+# This only runs when the user enabled "Chromium privacy" in Step 2.
+# It writes recommended Chromium policies system-wide, but only inside Chromium
+# configuration folders that already exist. It does not create legacy fallback
+# folders such as /etc/chromium-browser when they are not already present.
+#
+# A backup is created before changing policies. The restore helper remains
+# available after the GNOME installer removes its temporary files.
+if [ "$ENABLE_CHROMIUM_PRIVACY" -eq 1 ]; then
+    echo "Applying Chromium privacy policies..."
+
+    CHROMIUM_PRIVACY_POLICY_FILE="99-wobbo-rpi-chromium-privacy-recommended.json"
+    CHROMIUM_PRIVACY_BACKUP_ROOT="/var/backups/wobbo-chromium-privacy"
+
+    FOUND_CHROMIUM_BASE_DIRS=()
+
+    for BASE in /etc/chromium /etc/chromium-browser; do
+        if [ -d "$BASE" ]; then
+            FOUND_CHROMIUM_BASE_DIRS+=("$BASE")
+        fi
+    done
+
+    if [ "${#FOUND_CHROMIUM_BASE_DIRS[@]}" -eq 0 ]; then
+        echo "Fout: geen Chromium config-map gevonden."
+        echo "Niet gevonden:"
+        echo "  /etc/chromium"
+        echo "  /etc/chromium-browser"
+        echo "Ik maak deze basis-mappen bewust niet automatisch aan."
+        exit 1
+    fi
+
+    CHROMIUM_PRIVACY_BACKUP_DIR="$CHROMIUM_PRIVACY_BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$CHROMIUM_PRIVACY_BACKUP_DIR/files"
+    : > "$CHROMIUM_PRIVACY_BACKUP_DIR/manifest.tsv"
+
+    echo "Chromium policy backup: $CHROMIUM_PRIVACY_BACKUP_DIR"
+
+    for BASE in "${FOUND_CHROMIUM_BASE_DIRS[@]}"; do
+        TAG="$(basename "$BASE")"
+        POLICIES_DIR="$BASE/policies"
+
+        if [ -d "$POLICIES_DIR" ]; then
+            cp -a "$POLICIES_DIR" "$CHROMIUM_PRIVACY_BACKUP_DIR/files/${TAG}-policies"
+            printf '%s\t%s\t%s\n' "$TAG" "$BASE" "1" >> "$CHROMIUM_PRIVACY_BACKUP_DIR/manifest.tsv"
+        else
+            printf '%s\t%s\t%s\n' "$TAG" "$BASE" "0" >> "$CHROMIUM_PRIVACY_BACKUP_DIR/manifest.tsv"
+        fi
+    done
+
+    echo "$CHROMIUM_PRIVACY_BACKUP_DIR" > "$CHROMIUM_PRIVACY_BACKUP_ROOT/latest"
+
+    cat > /usr/local/sbin/wobbo-chromium-privacy-restore <<'EOF_WOBBO_CHROMIUM_PRIVACY_RESTORE'
+#!/usr/bin/env bash
+set -euo pipefail
+
+BACKUP_ROOT="/var/backups/wobbo-chromium-privacy"
+REQUESTED="${1:-latest}"
+
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+    echo "Fout: start dit script met sudo:"
+    echo "sudo wobbo-chromium-privacy-restore latest"
+    exit 1
+fi
+
+if [ "$REQUESTED" = "latest" ]; then
+    if [ ! -f "$BACKUP_ROOT/latest" ]; then
+        echo "Fout: geen latest-backup gevonden."
+        exit 1
+    fi
+
+    RESTORE_DIR="$(cat "$BACKUP_ROOT/latest")"
+else
+    RESTORE_DIR="$REQUESTED"
+fi
+
+if [ ! -d "$RESTORE_DIR" ]; then
+    echo "Fout: backup-map bestaat niet:"
+    echo "$RESTORE_DIR"
+    exit 1
+fi
+
+if [ ! -f "$RESTORE_DIR/manifest.tsv" ]; then
+    echo "Fout: manifest ontbreekt:"
+    echo "$RESTORE_DIR/manifest.tsv"
+    exit 1
+fi
+
+echo "Chromium policy backup terugzetten:"
+echo "$RESTORE_DIR"
+echo
+
+while IFS=$'\t' read -r TAG BASE POLICIES_EXISTED; do
+    if [ ! -d "$BASE" ]; then
+        echo "Overslaan, basis-map bestaat niet meer: $BASE"
+        continue
+    fi
+
+    if [ "$POLICIES_EXISTED" = "1" ]; then
+        echo "Herstellen: $BASE/policies"
+        rm -rf "$BASE/policies"
+        cp -a "$RESTORE_DIR/files/${TAG}-policies" "$BASE/policies"
+    else
+        echo "Verwijderen, want policies bestonden eerder niet: $BASE/policies"
+        rm -rf "$BASE/policies"
+    fi
+done < "$RESTORE_DIR/manifest.tsv"
+
+echo
+echo "Klaar. Start Chromium opnieuw en controleer: chrome://policy"
+EOF_WOBBO_CHROMIUM_PRIVACY_RESTORE
+
+    chmod 755 /usr/local/sbin/wobbo-chromium-privacy-restore
+
+    CHROMIUM_PRIVACY_TMP="$(mktemp)"
+    trap 'rm -f "$CHROMIUM_PRIVACY_TMP"' EXIT
+
+    cat > "$CHROMIUM_PRIVACY_TMP" <<'EOF_CHROMIUM_PRIVACY_POLICY'
+{
+  "SyncDisabled": true,
+  "BrowserSignin": 0,
+
+  "MetricsReportingEnabled": false,
+  "UrlKeyedAnonymizedDataCollectionEnabled": false,
+
+  "SearchSuggestEnabled": false,
+  "NetworkPredictionOptions": 2,
+
+  "TranslateEnabled": false,
+  "SpellCheckServiceEnabled": false,
+  "BackgroundModeEnabled": false,
+  "PromotionalTabsEnabled": false,
+
+  "OptimizationGuideOnDeviceModelEnabled": false,
+  "GenAiDefaultSettings": 2,
+  "GeminiSettings": 1,
+  "AIModeSettings": 1,
+  "GoogleSearchSidePanelEnabled": false,
+  "BrowserLabsEnabled": false,
+
+  "DnsOverHttpsMode": "off",
+
+  "DefaultSearchProviderEnabled": true,
+  "DefaultSearchProviderName": "DuckDuckGo",
+  "DefaultSearchProviderKeyword": "duckduckgo.com",
+  "DefaultSearchProviderSearchURL": "https://duckduckgo.com/?q={searchTerms}",
+  "DefaultSearchProviderEncoding": "UTF-8"
+}
+EOF_CHROMIUM_PRIVACY_POLICY
+
+    python3 -m json.tool "$CHROMIUM_PRIVACY_TMP" >/dev/null
+
+    for BASE in "${FOUND_CHROMIUM_BASE_DIRS[@]}"; do
+        RECOMMENDED_DIR="$BASE/policies/recommended"
+        TARGET_FILE="$RECOMMENDED_DIR/$CHROMIUM_PRIVACY_POLICY_FILE"
+
+        [ -d "$RECOMMENDED_DIR" ] || continue
+
+        python3 - "$CHROMIUM_PRIVACY_TMP" "$RECOMMENDED_DIR" "$TARGET_FILE" <<'PY_CHROMIUM_PRIVACY_DUPLICATES'
+import json
+import sys
+from pathlib import Path
+
+new_file = Path(sys.argv[1])
+recommended_dir = Path(sys.argv[2])
+target_file = Path(sys.argv[3])
+
+with new_file.open("r", encoding="utf-8") as f:
+    new_data = json.load(f)
+
+new_keys = set(new_data.keys())
+duplicates = []
+invalid_files = []
+
+for path in sorted(recommended_dir.glob("*.json")):
+    try:
+        if path.resolve() == target_file.resolve():
+            continue
+    except FileNotFoundError:
+        pass
+
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            old_data = json.load(f)
+    except Exception as e:
+        invalid_files.append((str(path), str(e)))
+        continue
+
+    for key in sorted(new_keys.intersection(old_data.keys())):
+        duplicates.append((str(path), key, old_data[key], new_data[key]))
+
+if invalid_files:
+    print()
+    print("Fout: bestaande Chromium policy-bestanden hebben ongeldige JSON.")
+    print("Het script stopt zodat Chromium policies niet onvoorspelbaar worden.")
+    print()
+
+    for file_path, error in invalid_files:
+        print(f"- {file_path}")
+        print(f"  {error}")
+
+    sys.exit(1)
+
+if duplicates:
+    print()
+    print("Fout: er bestaan al Chromium policies met dezelfde namen.")
+    print("Het script stopt om dubbele policy-definities te voorkomen.")
+    print()
+
+    for file_path, key, old_value, new_value in duplicates:
+        print(f"- {file_path}")
+        print(f"  {key}")
+        print(f"  bestaande waarde: {old_value!r}")
+        print(f"  nieuwe waarde:    {new_value!r}")
+
+    print()
+    print("Los dit eerst op door de bestaande policy te verwijderen, te hernoemen,")
+    print("of handmatig samen te voegen met het Wobbo-policybestand.")
+    sys.exit(1)
+PY_CHROMIUM_PRIVACY_DUPLICATES
+    done
+
+    for BASE in "${FOUND_CHROMIUM_BASE_DIRS[@]}"; do
+        RECOMMENDED_DIR="$BASE/policies/recommended"
+        TARGET_FILE="$RECOMMENDED_DIR/$CHROMIUM_PRIVACY_POLICY_FILE"
+
+        mkdir -p "$RECOMMENDED_DIR"
+        install -m 0644 -o root -g root "$CHROMIUM_PRIVACY_TMP" "$TARGET_FILE"
+    done
+
+    rm -f "$CHROMIUM_PRIVACY_TMP"
+    trap - EXIT
+fi && \
 
 
 
 # Install Chromium extensions system-wide.
 #
 # This installs GNOME Shell Integration and uBlock Origin Lite by Chromium policy.
-# It does not touch Chromium Preferences, themes, background startup,
-# or user profile settings.
+# The extensions are installed automatically, but users can disable them later
+# in Chromium's extension settings.
 mkdir -p /etc/chromium/policies/managed && \
 cat > /etc/chromium/policies/managed/chromium-extensions.json <<'EOF_CHROMIUM_EXTENSIONS'
 {
-  "ExtensionInstallForcelist": [
-    "gphhapmejobijbbhgpjhcjognlahblep;https://clients2.google.com/service/update2/crx",
-    "ddkjiahejlhfcafbddmgiahcphecmpfh;https://clients2.google.com/service/update2/crx"
-  ]
+  "ExtensionSettings": {
+    "gphhapmejobijbbhgpjhcjognlahblep": {
+      "installation_mode": "normal_installed",
+      "update_url": "https://clients2.google.com/service/update2/crx"
+    },
+    "ddkjiahejlhfcafbddmgiahcphecmpfh": {
+      "installation_mode": "normal_installed",
+      "update_url": "https://clients2.google.com/service/update2/crx"
+    }
+  }
 }
 EOF_CHROMIUM_EXTENSIONS
+
 chmod 644 /etc/chromium/policies/managed/chromium-extensions.json && \
 
 
@@ -1212,14 +1666,14 @@ supported_utf8_locale() {
 #
 # 1. Locale is already enabled:
 #      nl_NL.UTF-8 UTF-8
-#    â†’ do nothing
+#    → do nothing
 #
 # 2. Locale exists but is commented:
 #      # nl_NL.UTF-8 UTF-8
-#    â†’ uncomment it
+#    → uncomment it
 #
 # 3. Locale is supported but missing from the file:
-#    â†’ append it
+#    → append it
 #
 # Unsupported locales are skipped instead of causing the installer to fail.
 enable_locale_gen() {
@@ -1240,7 +1694,7 @@ enable_locale_gen() {
     # Uncomment the existing line instead of adding a duplicate.
     if grep -qxE "[[:space:]]*#[[:space:]]*${loc}\.UTF-8[[:space:]]+UTF-8" /etc/locale.gen; then
         sed -i -E "s|^[[:space:]]*#[[:space:]]*(${loc}\.UTF-8[[:space:]]+UTF-8)$|\1|" /etc/locale.gen
-        echo "  âœ” enabled locale: $line"
+        echo "  ✔ enabled locale: $line"
         changed=1
         return 0
     fi
@@ -1250,10 +1704,10 @@ enable_locale_gen() {
     # Only add it when Debian lists it as supported.
     if supported_utf8_locale "$loc"; then
         printf '%s\n' "$line" >> /etc/locale.gen
-        echo "  âœ” added locale: $line"
+        echo "  ✔ added locale: $line"
         changed=1
     else
-        echo "  âš  unsupported locale skipped: ${loc}.UTF-8"
+        echo "  ⚠ unsupported locale skipped: ${loc}.UTF-8"
     fi
 }
 
@@ -1382,7 +1836,7 @@ if [ -z "$CURRENT_DEFAULT" ]; then
         printf 'LANG=%s\nLANGUAGE=%s:%s\n' "$DEFAULT_LOCALE" "$BASE_LANG" "$SHORT_LANG" > /etc/default/locale
     }
 
-    echo "  âœ” default locale set: LANG=$DEFAULT_LOCALE"
+    echo "  ✔ default locale set: LANG=$DEFAULT_LOCALE"
 fi
 
 
@@ -1473,7 +1927,7 @@ if dpkg-query -W -f='${Status}' libreoffice-core 2>/dev/null | grep -q "install 
     WANT=(hunspell hyphen libreoffice-l10n libreoffice-help)
 else
     WANT=(hunspell hyphen)
-    echo "â„¹ LibreOffice is not installed; skipping LibreOffice language/help packages."
+    echo "ℹ LibreOffice is not installed; skipping LibreOffice language/help packages."
 fi
 
 
@@ -1487,14 +1941,14 @@ fi
 # Some Debian packages use full region codes, others only use the short language
 # code. Because naturally this could not be consistent. That would be too kind.
 for code in "${CODES[@]}"; do
-    echo "âž¡ Language: $code"
+    echo "➡ Language: $code"
     L="${code%%-*}"
 
     for typ in "${WANT[@]}"; do
         # LibreOffice does not need a separate l10n package for en-us in this
         # context, so skip that specific combination.
         if [ "$typ" = "libreoffice-l10n" ] && [ "$code" = "en-us" ]; then
-            echo "  â†· skip $typ for en-us"
+            echo "  ↷ skip $typ for en-us"
             continue
         fi
 
@@ -1535,11 +1989,11 @@ for code in "${CODES[@]}"; do
                 *" $found "* ) : ;;
                 * )
                     PKGS+=" $found"
-                    echo "  âœ” $typ â†’ $found"
+                    echo "  ✔ $typ → $found"
                     ;;
             esac
         else
-            echo "  âš  No package found for $typ ($code)"
+            echo "  ⚠ No package found for $typ ($code)"
         fi
     done
 done
@@ -1558,7 +2012,7 @@ if [ -n "$PKGS" ]; then
         if apt-cache madison "$p" 2>/dev/null | grep -q .; then
             apt-get install -y "$p" || true
         else
-            echo "  âš  Skip without candidate: $p"
+            echo "  ⚠ Skip without candidate: $p"
         fi
     done
 
@@ -1576,7 +2030,7 @@ fi
 #
 # That is why this helper reads /etc/locale.gen, /etc/default/locale, and GNOME
 # AccountsService files directly instead of relying on "locale -a".
-(dpkg -l locales-all 2>/dev/null | grep -q '^ii' && echo "â„¹ 'locales-all' is installed; we deliberately avoid 'locale -a'.") || true
+(dpkg -l locales-all 2>/dev/null | grep -q '^ii' && echo "ℹ 'locales-all' is installed; we deliberately avoid 'locale -a'.") || true
 EOF_SYNC
 
 # Install the language support helper and create its systemd service.
@@ -1614,16 +2068,19 @@ systemctl enable gnome-language-support-sync.service && \
 wget -O /tmp/gnome-fuzzy-app-search.zip https://extensions.gnome.org/extension-data/gnome-fuzzy-app-searchgnome-shell-extensions.Czarlie.gitlab.com.v26.shell-extension.zip && rm -rf /usr/share/gnome-shell/extensions/gnome-fuzzy-app-search@gnome-shell-extensions.Czarlie.gitlab.com && unzip -o /tmp/gnome-fuzzy-app-search.zip -d /usr/share/gnome-shell/extensions/gnome-fuzzy-app-search@gnome-shell-extensions.Czarlie.gitlab.com && chmod -R a+rX /usr/share/gnome-shell/extensions/gnome-fuzzy-app-search@gnome-shell-extensions.Czarlie.gitlab.com && \
 wget -O /tmp/add-to-desktop.zip https://extensions.gnome.org/extension-data/add-to-desktoptommimon.github.com.v15.shell-extension.zip && rm -rf /usr/share/gnome-shell/extensions/add-to-desktop@tommimon.github.com && unzip -o /tmp/add-to-desktop.zip -d /usr/share/gnome-shell/extensions/add-to-desktop@tommimon.github.com && chmod -R a+rX /usr/share/gnome-shell/extensions/add-to-desktop@tommimon.github.com && \
 
+
 # Install Yaru icon themes for LibreOffice.
 # LibreOffice uses separate image zip files for its toolbar icons. This block
 # installs the Yaru icon sets and prepares dark variants as well.
-wget -O /tmp/libreoffice_yaru-themes_2025-09-23.zip https://raw.githubusercontent.com/wobbo/libreoffice-yaru-themes/main/libreoffice_yaru-themes_2025-09-23.zip && unzip -o /tmp/libreoffice_yaru-themes_2025-09-23.zip -d /usr/lib/libreoffice/share/config/ 'images_yaru*.zip' && cd /usr/lib/libreoffice/share/config/ && for f in images_yaru*.zip; do [[ "$f" == *_dark.zip ]] && continue; mv -f "$f" "${f%.zip}_dark.zip"; done && unzip -o /tmp/libreoffice_yaru-themes_2025-09-23.zip -d /usr/lib/libreoffice/share/config/ && chmod -R a+rX /usr/lib/libreoffice/share/config/images_yaru* && ls -1 images_yaru*_dark.zip | wc -l && rm -f /tmp/libreoffice_yaru-themes_2025-09-23.zip && cd ~ && \
+wget -O /tmp/libreoffice_yaru-themes_2025-09-23.zip https://github.com/wobbo/libreoffice-yaru/releases/download/v48/libreoffice_yaru-themes_2025-09-23.zip && unzip -o /tmp/libreoffice_yaru-themes_2025-09-23.zip -d /usr/lib/libreoffice/share/config/ 'images_yaru*.zip' && cd /usr/lib/libreoffice/share/config/ && for f in images_yaru*.zip; do [[ "$f" == *_dark.zip ]] && continue; mv -f "$f" "${f%.zip}_dark.zip"; done && unzip -o /tmp/libreoffice_yaru-themes_2025-09-23.zip -d /usr/lib/libreoffice/share/config/ && chmod -R a+rX /usr/lib/libreoffice/share/config/images_yaru* && ls -1 images_yaru*_dark.zip | wc -l && rm -f /tmp/libreoffice_yaru-themes_2025-09-23.zip && cd ~ && \
+
 
 # Install patched Yaru theme packages and Geary.
 # These packages come from the project repositories instead of the normal Debian
 # repository. They are installed and then held to prevent apt from replacing them
 # with incompatible versions during normal upgrades.
-tmpdir=$(mktemp -d); cd "$tmpdir"; wget https://github.com/wobbo/yaru-themes-debian-trixie/releases/download/v1/yaru-theme-gnome-shell_25.04.1-0ubuntu1_all.deb https://github.com/wobbo/yaru-themes-debian-trixie/releases/download/v1/yaru-theme-gtk_25.04.1-0ubuntu1_all.deb https://github.com/wobbo/yaru-themes-debian-trixie/releases/download/v1/yaru-theme-icon_25.04.1-0ubuntu1_all.deb https://github.com/wobbo/yaru-themes-debian-trixie/releases/download/v1/yaru-theme-sound_25.04.1-0ubuntu1_all.deb https://github.com/wobbo/geary-44.1-for-debian-trixie-arm64/raw/main/geary_44.1-1wobbo1_arm64_20251202.deb; apt-mark unhold yaru-theme-gnome-shell yaru-theme-gtk yaru-theme-icon yaru-theme-sound geary || true && apt install -y ./yaru-theme-*.deb ./geary_44.1-1wobbo1_arm64_20251202.deb && apt-mark hold yaru-theme-gnome-shell yaru-theme-gtk yaru-theme-icon yaru-theme-sound geary && apt-mark hold yaru-theme-gnome-shell yaru-theme-gtk yaru-theme-icon yaru-theme-sound geary; apt-cache policy geary | grep Installed; cd ~; rm -rf "$tmpdir" && \
+tmpdir=$(mktemp -d); cd "$tmpdir"; wget https://github.com/wobbo/debian-yaru/releases/download/v1/yaru-theme-gnome-shell_25.04.1-0ubuntu1_all.deb https://github.com/wobbo/debian-yaru/releases/download/v1/yaru-theme-gtk_25.04.1-0ubuntu1_all.deb https://github.com/wobbo/debian-yaru/releases/download/v2/yaru-theme-icon_26.04.5.1ubuntu_all.deb https://github.com/wobbo/debian-yaru/releases/download/v2/yaru-theme-sound_26.04.5.1ubuntu_all.deb https://github.com/wobbo/geary-debian/releases/download/v44.1/geary_44.1-1wobbo1_arm64_20251202.deb; apt-mark unhold yaru-theme-gnome-shell yaru-theme-gtk yaru-theme-icon yaru-theme-sound geary || true; apt install -y --allow-downgrades ./yaru-theme-*.deb ./geary_44.1-1wobbo1_arm64_20251202.deb; apt-mark hold yaru-theme-gnome-shell yaru-theme-gtk yaru-theme-icon yaru-theme-sound geary; apt-cache policy geary | grep Installed; cd ~; rm -rf "$tmpdir" && \
+
 
 # Install Geary background helper.
 # This user service checks GNOME Online Accounts at login.
@@ -1713,7 +2170,7 @@ chmod 644 /etc/systemd/user/geary-background.service && \
 # Install the automatic Yaru theme service.
 # This user service keeps the GNOME Shell theme aligned with the selected Yaru
 # appearance, including light and dark mode changes.
-wget -O /usr/local/bin/gnome-auto-yaru.sh https://raw.githubusercontent.com/wobbo/yaru-themes-debian-trixie/main/gnome-auto-yaru_2025-10-07.sh && chmod 755 /usr/local/bin/gnome-auto-yaru.sh && wget -O /etc/systemd/user/gnome-auto-yaru.service https://raw.githubusercontent.com/wobbo/yaru-themes-debian-trixie/main/gnome-auto-yaru_2025-10-07.service && chmod 644 /etc/systemd/user/gnome-auto-yaru.service && \
+wget -O /usr/local/bin/gnome-auto-yaru.sh https://github.com/wobbo/debian-yaru/releases/download/v2/gnome-auto-yaru.sh && chmod 755 /usr/local/bin/gnome-auto-yaru.sh && wget -O /etc/systemd/user/gnome-auto-yaru.service https://github.com/wobbo/debian-yaru/releases/download/v2/gnome-auto-yaru.service && chmod 644 /etc/systemd/user/gnome-auto-yaru.service && \
 
 # Create a small Chromium desktop-file fix.
 # This disables StartupNotify in the Chromium launcher. It avoids misleading
@@ -1737,6 +2194,150 @@ fi && \
 # This keeps the final desktop cleaner by removing duplicate or unwanted tools
 # that would otherwise appear in the application menu.
 apt remove -y imagemagick* zutty firefox firefox-esr im-config showtime totem mpv htop && apt autoremove -y && \
+
+
+
+
+# Patch the GNOME Shell login background color.
+# GNOME stores the login background inside the compiled GNOME Shell theme resource.
+# The helper below changes only #lockDialogGroup to the Yaru background color.
+# It is also installed as an apt hook target so the patch can be restored after
+# future GNOME Shell package updates.
+cat > /usr/local/sbin/wobbo-yaru-gdm-background <<'EOF_WOBBO_YARU_GDM_BACKGROUND'
+#!/usr/bin/env bash
+set -euo pipefail
+
+RESOURCE="/usr/share/gnome-shell/gnome-shell-theme.gresource"
+COLOR="#222222"
+
+MARK_START="WOBBO_YARU_GDM_BACKGROUND_START"
+MARK_END="WOBBO_YARU_GDM_BACKGROUND_END"
+
+CSS_FILES=(
+    "/org/gnome/shell/theme/gnome-shell-dark.css"
+    "/org/gnome/shell/theme/gnome-shell-light.css"
+    "/org/gnome/shell/theme/gnome-shell-high-contrast.css"
+)
+
+# Do not break apt or boot if GNOME Shell is not installed yet.
+[ -f "$RESOURCE" ] || exit 0
+
+# Needed to rebuild the compiled GNOME Shell resource.
+command -v gresource >/dev/null 2>&1 || exit 0
+command -v glib-compile-resources >/dev/null 2>&1 || exit 0
+
+# Avoid two patch runs at the same time.
+if command -v flock >/dev/null 2>&1; then
+    exec 9>/run/wobbo-yaru-gdm-background.lock
+    flock -n 9 || exit 0
+fi
+
+# Fast check: if all existing target CSS files already contain the final patch,
+# there is nothing to do.
+existing_count=0
+patched_count=0
+
+for css in "${CSS_FILES[@]}"; do
+    if gresource list "$RESOURCE" 2>/dev/null | grep -Fxq "$css"; then
+        existing_count=$((existing_count + 1))
+
+        if gresource extract "$RESOURCE" "$css" 2>/dev/null |
+            grep -q "$MARK_START" &&
+           gresource extract "$RESOURCE" "$css" 2>/dev/null |
+            grep -q "background-color: $COLOR"; then
+            patched_count=$((patched_count + 1))
+        fi
+    fi
+done
+
+if [ "$existing_count" -gt 0 ] && [ "$existing_count" -eq "$patched_count" ]; then
+    exit 0
+fi
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+THEME_DIR="$tmp/theme"
+mkdir -p "$THEME_DIR"
+
+# Extract the complete GNOME Shell theme resource.
+while IFS= read -r item; do
+    rel="${item#/org/gnome/shell/theme/}"
+    mkdir -p "$THEME_DIR/$(dirname "$rel")"
+    gresource extract "$RESOURCE" "$item" > "$THEME_DIR/$rel"
+done < <(gresource list "$RESOURCE" | grep '^/org/gnome/shell/theme/')
+
+# Remove old Wobbo test/final blocks so this remains idempotent.
+while IFS= read -r css_file; do
+    for mark in \
+        WOBBO_SINGLE_RED_TEST \
+        WOBBO_SINGLE_COLOR_TEST \
+        WOBBO_YARU_GDM_BACKGROUND \
+        WOBBO_RED_TEST \
+        WOBBO_GDM_BG
+    do
+        perl -0pi -e "s/\n?\/\* ${mark}_START \*\/.*?\/\* ${mark}_END \*\/\n?/\n/sg" "$css_file"
+    done
+done < <(find "$THEME_DIR" -type f -name '*.css')
+
+# Add only the proven Yaru login background color.
+for css_file in \
+    "$THEME_DIR/gnome-shell-dark.css" \
+    "$THEME_DIR/gnome-shell-light.css" \
+    "$THEME_DIR/gnome-shell-high-contrast.css"
+do
+    [ -f "$css_file" ] || continue
+
+    cat >> "$css_file" <<EOF_CSS
+
+/* $MARK_START */
+#lockDialogGroup {
+  background-color: $COLOR;
+}
+/* $MARK_END */
+EOF_CSS
+done
+
+# Rebuild the GNOME Shell theme resource.
+cat > "$THEME_DIR/gnome-shell-theme.gresource.xml" <<EOF_XML
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/gnome/shell/theme">
+$(cd "$THEME_DIR" && find . -type f ! -name 'gnome-shell-theme.gresource.xml' | sed 's|^\./||' | sort | sed 's|.*|    <file>&</file>|')
+  </gresource>
+</gresources>
+EOF_XML
+
+glib-compile-resources \
+    "$THEME_DIR/gnome-shell-theme.gresource.xml" \
+    --sourcedir="$THEME_DIR" \
+    --target="$tmp/gnome-shell-theme.gresource"
+
+# Keep one backup before replacing the package-owned resource.
+cp -a "$RESOURCE" "$RESOURCE.backup-wobbo-yaru-gdm-background-$(date +%Y%m%d-%H%M%S)"
+cp -a "$tmp/gnome-shell-theme.gresource" "$RESOURCE"
+
+exit 0
+EOF_WOBBO_YARU_GDM_BACKGROUND
+
+chmod 755 /usr/local/sbin/wobbo-yaru-gdm-background && \
+
+# Reapply the GNOME Shell login background patch after future package changes.
+# This does not run at boot or login. It only runs after dpkg/apt package actions.
+cat > /etc/apt/apt.conf.d/99wobbo-yaru-gdm-background <<'EOF_WOBBO_YARU_GDM_BACKGROUND_APT'
+DPkg::Post-Invoke {
+    "if [ -x /usr/local/sbin/wobbo-yaru-gdm-background ]; then /usr/local/sbin/wobbo-yaru-gdm-background >/dev/null 2>&1 || true; fi";
+};
+EOF_WOBBO_YARU_GDM_BACKGROUND_APT
+
+chmod 644 /etc/apt/apt.conf.d/99wobbo-yaru-gdm-background && \
+
+# Apply the patch once during installation.
+# Future GNOME Shell package updates are handled by the apt hook above.
+/usr/local/sbin/wobbo-yaru-gdm-background || true && \
+
+
+
 
 # Enable desktop services and boot into graphical mode.
 # The Yaru user service and Chromium fix service are enabled, and the system
@@ -1892,6 +2493,7 @@ AUDIO_EDITOR_STATE=OFF
 CODE_EDITOR_STATE=OFF
 REMOTE_GAMING_STATE=OFF
 RASPBERRY_PI_STATE=OFF
+CHROMIUM_PRIVACY_STATE=OFF
 DESKTOP_EOF
 chmod 600 "$DESKTOP_FILE"
 
@@ -2000,7 +2602,7 @@ show_welcome() {
         --yes-button "Continue" \
         --no-button "Cancel" \
         --yesno "\
- Welcome to the GUIDE GNOME Installer.
+ Welcome to the GUIDE GNOME Installer 2026-08-17
 
  Transform your Raspberry Pi 4/5 into a sleek,
  Ubuntu-styled workstation.
@@ -2036,12 +2638,12 @@ show_bootstrap() {
  Initializes a secure workspace to store
  temporary installation files:
 
-  â€¢ ~/.install_gnome/state
-  â€¢ ~/.install_gnome/desktop
-  â€¢ ~/.install_gnome/optional
-  â€¢ ~/.install_gnome/step1.sh
-  â€¢ ~/.install_gnome/step2.sh
-  â€¢ ~/.install_gnome/step3.sh
+  • ~/.install_gnome/state
+  • ~/.install_gnome/desktop
+  • ~/.install_gnome/optional
+  • ~/.install_gnome/step1.sh
+  • ~/.install_gnome/step2.sh
+  • ~/.install_gnome/step3.sh
 
  Temporary installer files are kept until
  the installation completes. They are removed
