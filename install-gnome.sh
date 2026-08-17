@@ -9,7 +9,7 @@
 # 2026-08-17 UTC
 # Ernst Lanser <ernst.lanser@wobbo.org>
 # https://forums.raspberrypi.com/viewtopic.php?t=373028
-# https://github.com/wobbo/rpi-gnome-install
+# https://github.com/wobbo/rpi-gnome
 
 # WARNING.
 #
@@ -23,7 +23,7 @@
 # Use these commands when you want to download the installer first, make it
 # executable, and then start it manually from the terminal.
 #
-# wget -O install-gnome.sh https://wobbo.org/install/2026-08-17/install-gnome.sh
+# wget -O install-gnome.sh https://wobbo.org/2026-08-17/install-gnome.sh
 # chmod +x install-gnome.sh
 # ./install-gnome.sh
 
@@ -33,7 +33,7 @@
 # a fresh copy, makes it executable, and starts it. It is useful when installing
 # through SSH and you want one copy-paste command.
 #
-# rm -f ./install-gnome.sh && rm -rf ./.install_gnome && wget https://wobbo.org/install/2026-08-17/install-gnome.sh && chmod +x install-gnome.sh && ./install-gnome.sh
+# rm -f ./install-gnome.sh && rm -rf ./.install_gnome && wget https://wobbo.org/2026-08-17/install-gnome.sh && chmod +x install-gnome.sh && ./install-gnome.sh
 
 # Stop immediately when a command fails.
 #
